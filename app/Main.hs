@@ -70,7 +70,7 @@ fn acc player _ = do
     where
       resultGrid (Just g) = g
       resultGrid Nothing = acc
-      winner (Just g) = Nothing
+      winner (Just g) = checkWinner g
       winner Nothing = Just (next player)
 
 showGrid g = intercalate "\n" (map showLine g)
@@ -82,6 +82,38 @@ showCell :: Cell -> String
 showCell (Just Player1) = "1"
 showCell (Just Player2) = "2"
 showCell Nothing = "_"
+
+checkLine :: Grid -> Player -> Int -> Bool
+checkLine g p i = all (== Just p) (g !! i)
+
+checkAllLines :: Grid -> Player -> Bool
+checkAllLines g p = any (checkLine g p) [0..2]
+
+checkAllColumns :: Grid -> Player -> Bool
+checkAllColumns = checkAllLines . transpose
+
+indices :: [a] -> [Int]
+indices arr = [0 .. (length arr - 1)]
+
+checkDiag :: Grid -> Player -> Bool
+checkDiag g p = all (== Just p) [g !! i !! i | i <- indices g]
+
+checkAntiDiag :: Grid -> Player -> Bool
+checkAntiDiag g p = all (== Just p) [g !! i !! ((length g -1) - i) | i <- indices g]
+
+checkWinner' :: Grid -> Player -> Bool
+checkWinner' g p = True `elem` [checkAllLines g p, checkAllColumns g p, checkDiag g p, checkAntiDiag g p]
+
+firstJust :: Maybe a -> Maybe a -> Maybe a
+firstJust (Just v) _ = Just v
+firstJust _ (Just v) = Just v
+firstJust _ _ = Nothing
+
+checkWinner :: Grid -> Maybe Player
+checkWinner g = firstJust player1Won player2Won
+  where
+    player1Won = mfilter (checkWinner' g) (Just Player1)
+    player2Won = mfilter (checkWinner' g) (Just Player2)
 
 ask :: String -> IO String
 ask msg = do
