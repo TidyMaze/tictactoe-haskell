@@ -38,8 +38,14 @@ updateGrid arr2d c newVal = map replaceLine gridWithIndex
 
 myCustomGrid = updateGrid emptyGrid (2, 2) (Just Player1)
 
+showWinner (Just p) = show p ++ " won. Congratulations!"
+showWinner Nothing = "Nobody won, you all suck."
+
 main :: IO ()
-main = play >>= print
+main = do
+  winner <- play
+  let msg = showWinner winner
+  putStrLn msg 
 
 get2D :: [[a]] -> Coord -> Maybe a
 get2D arr c | x < 0 || y < 0 || x >= size || y >= size = Nothing
