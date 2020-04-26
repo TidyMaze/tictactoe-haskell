@@ -1,8 +1,11 @@
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 module Main where
 
 import Data.List
 import Data.List.Split
 import Control.Exception
+import Control.Monad
 
 f :: Num a => a -> a -> a
 f a b = a + b
@@ -36,7 +39,7 @@ updateGrid arr2d c newVal = map replaceLine gridWithIndex
 myCustomGrid = updateGrid emptyGrid (2, 2) (Just Player1)
 
 main :: IO ()
-main = print emptyGrid
+main = play >>= print
 
 get2D :: [[a]] -> Coord -> Maybe a
 get2D arr c | x < 0 || y < 0 || x >= size || y >= size = Nothing
@@ -55,30 +58,40 @@ next Player1 = Player2
 next Player2 = Player1
 
 play :: IO (Maybe Player)
-play = mapM (\(a,b,c) -> c) $ fn emptyGrid Player1 Nothing
-  where
-    fn :: Grid -> Player -> Maybe Player -> IO (Grid, Player, Maybe Player)
-    fn g p (Just w) = undefined
-    fn acc player _ = do
-      curCoord <- askCoordUntil
-      fn (resultGrid updatedGrid) (next player) (winner updatedGrid)
-                          where
-                            updatedGrid = playAction acc curCoord player
-                            resultGrid (Just g) = g
-                            resultGrid Nothing = acc
-                            winner (Just g) = Nothing
-                            winner Nothing = Just (next player)
+play = fmap (\(a,b,c) -> c) $ fn emptyGrid Player1 Nothing
+
+fn :: Grid -> Player -> Maybe Player -> IO (Grid, Player, Maybe Player)
+fn g p (Just w) = pure (g, p, Just w)
+fn acc player _ = do
+  putStrLn (showGrid acc)
+  curCoord <- askCoordUntil
+  let updatedGrid = playAction acc curCoord player
+  fn (resultGrid updatedGrid) (next player) (winner updatedGrid)
+    where
+      resultGrid (Just g) = g
+      resultGrid Nothing = acc
+      winner (Just g) = Nothing
+      winner Nothing = Just (next player)
+
+showGrid g = intercalate "\n" (map showLine g)
+
+showLine :: [Cell] -> String
+showLine l = unwords (map showCell l)
+
+showCell :: Cell -> String
+showCell (Just Player1) = "1"
+showCell (Just Player2) = "2"
+showCell Nothing = "_"
 
 ask :: String -> IO String
 ask msg = do
-  print msg
+  putStrLn msg
   getLine
 
 readMaybe :: (Read a) => String -> Maybe a
 readMaybe s = case reads s of
               [(x, "")] -> Just x
               _ -> Nothing
-
 
 maybeToEither :: a -> Maybe b -> Either a b
 maybeToEither = (`maybe` Right) . Left
